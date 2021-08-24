@@ -1,5 +1,4 @@
 import sys
-sys.path.append('core')
 
 from PIL import Image
 import argparse
@@ -10,12 +9,12 @@ import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
-import datasets
-from utils import flow_viz
-from utils import frame_utils
+import core.datasets as datasets
+from core.utils import flow_viz
+from core.utils import frame_utils
 
-from raft import RAFT
-from utils.utils import InputPadder, forward_interpolate
+from core.raft import RAFT
+from core.utils.utils import InputPadder, forward_interpolate
 
 
 @torch.no_grad()
@@ -172,7 +171,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', help="dataset for evaluation")
     parser.add_argument('--small', action='store_true', help='use small model')
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
-    parser.add_argument('--alternate_corr', action='store_true', help='use efficent correlation implementation')
+    parser.add_argument('--alternate_corr', action='store_true', help='use efficient correlation implementation')
     args = parser.parse_args()
 
     model = torch.nn.DataParallel(RAFT(args))
