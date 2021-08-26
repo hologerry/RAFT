@@ -5,8 +5,11 @@ import os
 
 import cv2
 import numpy as np
+from tqdm.contrib import tzip
 import torch
 from PIL import Image
+from skimage.io import imsave
+
 from core.raft import RAFT
 from core.utils import flow_viz
 from core.utils.utils import InputPadder
@@ -27,11 +30,13 @@ def viz(img, flo, out_imfile):
 
     # map flow to rgb image
     flo = flow_viz.flow_to_image(flo)
-    img_flo = np.concatenate([img, flo], axis=0)
+    out_filename = out_imfile.replace(".jpg", '.png')
+    imsave(out_filename, flo)
+    # img_flo = np.concatenate([img, flo], axis=0)
 
-    import matplotlib.pyplot as plt
-    plt.imshow(img_flo / 255.0)
-    plt.savefig(out_imfile)
+    # import matplotlib.pyplot as plt
+    # plt.imshow(img_flo / 255.0)
+    # plt.savefig(out_imfile)
     # plt.show()
 
     # cv2.imshow('image', img_flo[:, :, [2, 1, 0]]/255.0)
@@ -47,31 +52,48 @@ def demo(args):
     model.to(DEVICE)
     model.eval()
 
-    os.makedirs(args.output_path, exist_ok=True)
+    os.makedirs(args.fw_output_path, exist_ok=True)
+    os.makedirs(args.bw_output_path, exist_ok=True)
 
     with torch.no_grad():
         images = glob.glob(os.path.join(args.path, '*.png')) + \
             glob.glob(os.path.join(args.path, '*.jpg'))
 
         images = sorted(images)
-        for imfile1, imfile2 in zip(images[:-1], images[1:]):
-            image1 = load_image(imfile1)
-            image2 = load_image(imfile2)
 
-            padder = InputPadder(image1.shape)
-            image1, image2 = padder.pad(image1, image2)
+        if args.stage == 'fw':
+            for imfile1, imfile2 in tzip(images[:-1], images[1:]):
+                image1 = load_image(imfile1)
+                image2 = load_image(imfile2)
 
-            flow_low, flow_up = model(image1, image2, iters=20, test_mode=True)
+                padder = InputPadder(image1.shape)
+                image1, image2 = padder.pad(image1, image2)
 
-            out_imfile1 = imfile1.replace(args.path, args.output_path)
-            viz(image1, flow_up, out_imfile1)
+                fw_flow_low, fw_flow_up = model(image1, image2, iters=20, test_mode=True)
+
+                fw_out_imfile1 = imfile1.replace(args.path, args.fw_output_path)
+                viz(image1, fw_flow_up, fw_out_imfile1)
+        else:
+            for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
+                image_p = load_image(imfile_p)
+                image_c = load_image(imfile_c)
+
+                padder = InputPadder(image_p.shape)
+                image_p, image_c = padder.pad(image_p, image_c)
+
+                bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
+
+                bw_out_imfile1 = imfile_c.replace(args.path, args.bw_output_path)
+                viz(image_c, bw_flow_up, bw_out_imfile1)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', help="restore checkpoint")
     parser.add_argument('--path', help="dataset for evaluation")
-    parser.add_argument('--output_path', help="output path for evaluation")
+    parser.add_argument('--stage', help="forward or backward")
+    parser.add_argument('--fw_output_path', help="output path for evaluation")
+    parser.add_argument('--bw_output_path', help="output path for evaluation")
     parser.add_argument('--small', action='store_true', help='use small model')
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
     parser.add_argument('--alternate_corr', action='store_true', help='use efficient correlation implementation')
