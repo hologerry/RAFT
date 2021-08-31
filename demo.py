@@ -56,18 +56,16 @@ def demo(args):
     fw_flow_data_root = '/D_data/Seg/data/PSEG_flow_fw'
     bw_flow_data_root = '/D_data/Seg/data/PSEG_flow_bw'
 
-    # dataset = 'blender_old'
-    dataset = 'gen_mobilenet'
-    # dataset = 'turk_test'
-    jpeg_path = os.path.join(dataset_root, dataset, 'JPEGImages', '480p')
-
-
+    datasets = ['blender_old', 'gen_mobilenet', 'turk_test']
+    dataset = 'turk_test'
+    mode = 'bw'
     with torch.no_grad():
+        jpeg_path = os.path.join(dataset_root, dataset, 'JPEGImages', '480p')
+
         if dataset == 'blender_old' or dataset == 'turk_test':
             sequences = sorted(os.listdir(jpeg_path))
                 
             for i, seq in enumerate(sequences):
-                print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}]")
                 seq_path = os.path.join(jpeg_path, seq)
                 fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
                 bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
@@ -79,47 +77,8 @@ def demo(args):
 
                 images = sorted(images)
 
-                for imfile1, imfile2 in tzip(images[:-1], images[1:]):
-                    image1 = load_image(imfile1)
-                    image2 = load_image(imfile2)
-
-                    padder = InputPadder(image1.shape)
-                    image1, image2 = padder.pad(image1, image2)
-
-                    fw_flow_low, fw_flow_up = model(image1, image2, iters=20, test_mode=True)
-
-                    fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root)
-                    viz(image1, fw_flow_up, fw_out_imfile1)
-
-                for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
-                    image_p = load_image(imfile_p)
-                    image_c = load_image(imfile_c)
-
-                    padder = InputPadder(image_p.shape)
-                    image_p, image_c = padder.pad(image_p, image_c)
-
-                    bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
-
-                    bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root)
-                    viz(image_c, bw_flow_up, bw_out_imfile1)
-
-        else:
-            challenges = sorted(os.listdir(jpeg_path))
-            for cha in challenges:
-                sequences = sorted(os.listdir(os.path.join(jpeg_path, cha)))
-                for i, seq in enumerate(sequences):
-                    print(f"dataset {dataset}, challenge {cha}, sequence {seq} [{i}/{len(sequences)}]")
-                    seq_path = os.path.join(jpeg_path, cha, seq)
-                    fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
-                    bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
-                    images = glob.glob(os.path.join(seq_path, '*.png')) + glob.glob(os.path.join(seq_path, '*.jpg'))
-
-
-                    os.makedirs(fw_output_seq_path, exist_ok=True)
-                    os.makedirs(bw_output_seq_path, exist_ok=True)
-
-                    images = sorted(images)
-
+                if mode == 'fw':
+                    print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
                     for imfile1, imfile2 in tzip(images[:-1], images[1:]):
                         image1 = load_image(imfile1)
                         image2 = load_image(imfile2)
@@ -132,6 +91,8 @@ def demo(args):
                         fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root)
                         viz(image1, fw_flow_up, fw_out_imfile1)
 
+                elif mode == 'bw':
+                    print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
                     for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
                         image_p = load_image(imfile_p)
                         image_c = load_image(imfile_c)
@@ -142,7 +103,51 @@ def demo(args):
                         bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
 
                         bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root)
-                        viz(image_c, bw_flow_up, bw_out_imfile1)                
+                        viz(image_c, bw_flow_up, bw_out_imfile1)
+
+        elif dataset == 'gen_mobilenet':
+            challenges = sorted(os.listdir(jpeg_path))
+            for cha in challenges:
+                sequences = sorted(os.listdir(os.path.join(jpeg_path, cha)))
+                for i, seq in enumerate(sequences):
+                    seq_path = os.path.join(jpeg_path, cha, seq)
+                    fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
+                    bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
+                    images = glob.glob(os.path.join(seq_path, '*.png')) + glob.glob(os.path.join(seq_path, '*.jpg'))
+
+
+                    os.makedirs(fw_output_seq_path, exist_ok=True)
+                    os.makedirs(bw_output_seq_path, exist_ok=True)
+
+                    images = sorted(images)
+
+                    if mode == 'fw':
+                        print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
+                        for imfile1, imfile2 in tzip(images[:-1], images[1:]):
+                            image1 = load_image(imfile1)
+                            image2 = load_image(imfile2)
+
+                            padder = InputPadder(image1.shape)
+                            image1, image2 = padder.pad(image1, image2)
+
+                            fw_flow_low, fw_flow_up = model(image1, image2, iters=20, test_mode=True)
+
+                            fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root)
+                            viz(image1, fw_flow_up, fw_out_imfile1)
+
+                    elif mode == 'bw':
+                        print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
+                        for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
+                            image_p = load_image(imfile_p)
+                            image_c = load_image(imfile_c)
+
+                            padder = InputPadder(image_p.shape)
+                            image_p, image_c = padder.pad(image_p, image_c)
+
+                            bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
+
+                            bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root)
+                            viz(image_c, bw_flow_up, bw_out_imfile1)                
 
 
 if __name__ == '__main__':
