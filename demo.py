@@ -52,44 +52,102 @@ def demo(args):
     model.to(DEVICE)
     model.eval()
 
-    os.makedirs(args.fw_output_path, exist_ok=True)
-    os.makedirs(args.bw_output_path, exist_ok=True)
+    dataset_root = '/D_data/Seg/data/PSEG'
+    fw_flow_data_root = '/D_data/Seg/data/PSEG_flow_fw'
+    bw_flow_data_root = '/D_data/Seg/data/PSEG_flow_bw'
+
+    # dataset = 'blender_old'
+    dataset = 'gen_mobilenet'
+    # dataset = 'turk_test'
+    jpeg_path = os.path.join(dataset_root, dataset, 'JPEGImages', '480p')
+
 
     with torch.no_grad():
-        images = glob.glob(os.path.join(args.path, '*.png')) + \
-            glob.glob(os.path.join(args.path, '*.jpg'))
+        if dataset == 'blender_old' or dataset == 'turk_test':
+            sequences = sorted(os.listdir(jpeg_path))
+                
+            for i, seq in enumerate(sequences):
+                print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}]")
+                seq_path = os.path.join(jpeg_path, seq)
+                fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
+                bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
+                images = glob.glob(os.path.join(seq_path, '*.png')) + glob.glob(os.path.join(seq_path, '*.jpg'))
 
-        images = sorted(images)
 
-        if args.stage == 'fw':
-            for imfile1, imfile2 in tzip(images[:-1], images[1:]):
-                image1 = load_image(imfile1)
-                image2 = load_image(imfile2)
+                os.makedirs(fw_output_seq_path, exist_ok=True)
+                os.makedirs(bw_output_seq_path, exist_ok=True)
 
-                padder = InputPadder(image1.shape)
-                image1, image2 = padder.pad(image1, image2)
+                images = sorted(images)
 
-                fw_flow_low, fw_flow_up = model(image1, image2, iters=20, test_mode=True)
+                for imfile1, imfile2 in tzip(images[:-1], images[1:]):
+                    image1 = load_image(imfile1)
+                    image2 = load_image(imfile2)
 
-                fw_out_imfile1 = imfile1.replace(args.path, args.fw_output_path)
-                viz(image1, fw_flow_up, fw_out_imfile1)
+                    padder = InputPadder(image1.shape)
+                    image1, image2 = padder.pad(image1, image2)
+
+                    fw_flow_low, fw_flow_up = model(image1, image2, iters=20, test_mode=True)
+
+                    fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root)
+                    viz(image1, fw_flow_up, fw_out_imfile1)
+
+                for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
+                    image_p = load_image(imfile_p)
+                    image_c = load_image(imfile_c)
+
+                    padder = InputPadder(image_p.shape)
+                    image_p, image_c = padder.pad(image_p, image_c)
+
+                    bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
+
+                    bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root)
+                    viz(image_c, bw_flow_up, bw_out_imfile1)
+
         else:
-            for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
-                image_p = load_image(imfile_p)
-                image_c = load_image(imfile_c)
+            challenges = sorted(os.listdir(jpeg_path))
+            for cha in challenges:
+                sequences = sorted(os.listdir(os.path.join(jpeg_path, cha)))
+                for i, seq in enumerate(sequences):
+                    print(f"dataset {dataset}, challenge {cha}, sequence {seq} [{i}/{len(sequences)}]")
+                    seq_path = os.path.join(jpeg_path, cha, seq)
+                    fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
+                    bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
+                    images = glob.glob(os.path.join(seq_path, '*.png')) + glob.glob(os.path.join(seq_path, '*.jpg'))
 
-                padder = InputPadder(image_p.shape)
-                image_p, image_c = padder.pad(image_p, image_c)
 
-                bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
+                    os.makedirs(fw_output_seq_path, exist_ok=True)
+                    os.makedirs(bw_output_seq_path, exist_ok=True)
 
-                bw_out_imfile1 = imfile_c.replace(args.path, args.bw_output_path)
-                viz(image_c, bw_flow_up, bw_out_imfile1)
+                    images = sorted(images)
+
+                    for imfile1, imfile2 in tzip(images[:-1], images[1:]):
+                        image1 = load_image(imfile1)
+                        image2 = load_image(imfile2)
+
+                        padder = InputPadder(image1.shape)
+                        image1, image2 = padder.pad(image1, image2)
+
+                        fw_flow_low, fw_flow_up = model(image1, image2, iters=20, test_mode=True)
+
+                        fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root)
+                        viz(image1, fw_flow_up, fw_out_imfile1)
+
+                    for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
+                        image_p = load_image(imfile_p)
+                        image_c = load_image(imfile_c)
+
+                        padder = InputPadder(image_p.shape)
+                        image_p, image_c = padder.pad(image_p, image_c)
+
+                        bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
+
+                        bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root)
+                        viz(image_c, bw_flow_up, bw_out_imfile1)                
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', help="restore checkpoint")
+    parser.add_argument('--model', help="restore checkpoint", default='models/raft-things.pth')
     parser.add_argument('--path', help="dataset for evaluation")
     parser.add_argument('--stage', help="forward or backward")
     parser.add_argument('--fw_output_path', help="output path for evaluation")
@@ -98,5 +156,5 @@ if __name__ == '__main__':
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
     parser.add_argument('--alternate_corr', action='store_true', help='use efficient correlation implementation')
     args = parser.parse_args()
-
+    
     demo(args)
