@@ -60,6 +60,7 @@ def demo(args):
     datasets = ['blender_old', 'gen_mobilenet', 'turk_test']
     dataset = 'turk_test'
     mode = 'bw'
+    print(f"dataset {dataset} mode {mode}")
     with torch.no_grad():
         jpeg_path = os.path.join(dataset_root, dataset, 'JPEGImages', '480p')
 
@@ -79,7 +80,6 @@ def demo(args):
                 images = sorted(images)
 
                 if mode == 'fw':
-                    print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
                     for imfile1, imfile2 in tzip(images[:-1], images[1:]):
                         image1 = load_image(imfile1)
                         image2 = load_image(imfile2)
@@ -93,7 +93,6 @@ def demo(args):
                         viz(image1, fw_flow_up, fw_out_imfile1)
 
                 elif mode == 'bw':
-                    print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
                     for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False):
                         image_p = load_image(imfile_p)
                         image_c = load_image(imfile_c)
@@ -123,7 +122,6 @@ def demo(args):
                     images = sorted(images)
 
                     if mode == 'fw':
-                        print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
                         for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False):
                             image1 = load_image(imfile1)
                             image2 = load_image(imfile2)
@@ -137,7 +135,6 @@ def demo(args):
                             viz(image1, fw_flow_up, fw_out_imfile1)
 
                     elif mode == 'bw':
-                        print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
                         for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False):
                             image_p = load_image(imfile_p)
                             image_c = load_image(imfile_c)
