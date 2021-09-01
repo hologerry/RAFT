@@ -6,6 +6,7 @@ import os
 import cv2
 import numpy as np
 from tqdm.contrib import tzip
+from tqdm import tqdm
 import torch
 from PIL import Image
 from skimage.io import imsave
@@ -65,7 +66,7 @@ def demo(args):
         if dataset == 'blender_old' or dataset == 'turk_test':
             sequences = sorted(os.listdir(jpeg_path))
                 
-            for i, seq in enumerate(sequences):
+            for i, seq in tqdm(enumerate(sequences)):
                 seq_path = os.path.join(jpeg_path, seq)
                 fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
                 bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
@@ -93,7 +94,7 @@ def demo(args):
 
                 elif mode == 'bw':
                     print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
-                    for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
+                    for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False):
                         image_p = load_image(imfile_p)
                         image_c = load_image(imfile_c)
 
@@ -107,9 +108,9 @@ def demo(args):
 
         elif dataset == 'gen_mobilenet':
             challenges = sorted(os.listdir(jpeg_path))
-            for cha in challenges:
+            for cha in tqdm(challenges):
                 sequences = sorted(os.listdir(os.path.join(jpeg_path, cha)))
-                for i, seq in enumerate(sequences):
+                for i, seq in tqdm(enumerate(sequences)):
                     seq_path = os.path.join(jpeg_path, cha, seq)
                     fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
                     bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
@@ -123,7 +124,7 @@ def demo(args):
 
                     if mode == 'fw':
                         print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
-                        for imfile1, imfile2 in tzip(images[:-1], images[1:]):
+                        for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False):
                             image1 = load_image(imfile1)
                             image2 = load_image(imfile2)
 
@@ -137,7 +138,7 @@ def demo(args):
 
                     elif mode == 'bw':
                         print(f"dataset {dataset}, sequence {seq} [{i}/{len(sequences)}], mode {mode}")
-                        for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
+                        for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False):
                             image_p = load_image(imfile_p)
                             image_c = load_image(imfile_c)
 
