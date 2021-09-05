@@ -66,7 +66,7 @@ def demo(args):
 
         if dataset == 'blender_old' or dataset == 'turk_test':
             sequences = sorted(os.listdir(jpeg_path))
-                
+
             for i, seq in tqdm(enumerate(sequences)):
                 seq_path = os.path.join(jpeg_path, seq)
                 fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
@@ -145,7 +145,7 @@ def demo(args):
                             bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
 
                             bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root)
-                            viz(image_c, bw_flow_up, bw_out_imfile1)                
+                            viz(image_c, bw_flow_up, bw_out_imfile1)
 
 
 if __name__ == '__main__':
@@ -159,5 +159,5 @@ if __name__ == '__main__':
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
     parser.add_argument('--alternate_corr', action='store_true', help='use efficient correlation implementation')
     args = parser.parse_args()
-    
+
     demo(args)
