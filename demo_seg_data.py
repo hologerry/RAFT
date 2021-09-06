@@ -53,9 +53,9 @@ def demo(args):
     model.to(DEVICE)
     model.eval()
 
-    dataset_root = '/D_data/Seg/data/PSEG'
-    fw_flow_data_root = '/D_data/Seg/data/PSEG_flow_fw'
-    bw_flow_data_root = '/D_data/Seg/data/PSEG_flow_bw'
+    dataset_root = './data/PSEG'
+    fw_flow_data_root = './data/PSEG_flow_fw'
+    bw_flow_data_root = './data/PSEG_flow_bw'
 
     datasets = ['blender_old', 'gen_mobilenet', 'turk_test']
     assert args.dataset in datasets
@@ -80,7 +80,7 @@ def demo(args):
                 images = sorted(images)
 
                 if args.mode == 'fw':
-                    for imfile1, imfile2 in tzip(images[:-1], images[1:]):
+                    for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False):
                         image1 = load_image(imfile1)
                         image2 = load_image(imfile2)
 
@@ -149,7 +149,7 @@ def demo(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', help="restore checkpoint", default='models/raft-things.pth')
+    parser.add_argument('--model', help="restore checkpoint", default='RAFT/models/raft-things.pth')
     parser.add_argument('--path', help="dataset for evaluation")
     parser.add_argument('--mode', help="forward or backward")
     parser.add_argument('--dataset', help='dataset')

@@ -21,17 +21,18 @@ DEVICE = 'cuda'
 
 def demo(args):
 
-    dataset_root = '/D_data/Seg/data/PSEG'
-    v_flip_dataset_data_root = f'/D_data/Seg/data/PSEG_v_flip'
-    h_flip_dataset_data_root = f'/D_data/Seg/data/PSEG_h_flip'
-    hv_flip_dataset_data_root = f'/D_data/Seg/data/PSEG_hv_flip'
+    dataset_root = './data/PSEG'
+    v_flip_dataset_data_root = f'./data/PSEG_v_flip'
+    h_flip_dataset_data_root = f'./data/PSEG_h_flip'
+    hv_flip_dataset_data_root = f'./data/PSEG_hv_flip'
 
     datasets = ['blender_old', 'gen_mobilenet', 'turk_test']
+    data_stage = 'JPEGImages' if args.stage == 'img' else 'Annotations'
     assert args.dataset in datasets
 
     print(f"Fliping dataset {args.dataset}")
     with torch.no_grad():
-        jpeg_path = os.path.join(dataset_root, args.dataset, 'JPEGImages', '480p')
+        jpeg_path = os.path.join(dataset_root, args.dataset, data_stage, '480p')
 
         if args.dataset == 'blender_old' or args.dataset == 'turk_test':
             sequences = sorted(os.listdir(jpeg_path))
@@ -96,6 +97,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', help="dataset for evaluation")
     parser.add_argument('--dataset', help='dataset')
+    parser.add_argument('--stage', choices=['img', 'seg'])
     parser.add_argument('--small', action='store_true', help='use small model')
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
     parser.add_argument('--alternate_corr', action='store_true', help='use efficient correlation implementation')
