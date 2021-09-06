@@ -97,7 +97,7 @@ if __name__ == '__main__':
     parser.add_argument('--bw_output_path', help="output path for evaluation")
     parser.add_argument('--small', action='store_true', help='use small model')
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
-    parser.add_argument('--iters', type=int, help="iterations for raft", default=10)
+    parser.add_argument('--iters', type=int, help="iterations for raft", default=20)
     parser.add_argument('--alternate_corr', action='store_true', help='use efficient correlation implementation')
     args = parser.parse_args()
     args.fw_output_path = args.path.replace('object_test_raw_data/frames', f'object_test_raft_output_fw_iter{args.iters}/things')
