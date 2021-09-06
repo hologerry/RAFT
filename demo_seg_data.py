@@ -9,7 +9,7 @@ from tqdm.contrib import tzip
 from tqdm import tqdm
 import torch
 from PIL import Image
-from skimage.io import imsave
+from cv2 import imwrite, imread
 
 from core.raft import RAFT
 from core.utils import flow_viz
@@ -32,7 +32,7 @@ def viz(img, flo, out_imfile):
     # map flow to rgb image
     flo = flow_viz.flow_to_image(flo)
     out_filename = out_imfile.replace(".jpg", '.png')
-    imsave(out_filename, flo)
+    imwrite(out_filename, flo)
     # img_flo = np.concatenate([img, flo], axis=0)
 
     # import matplotlib.pyplot as plt
@@ -58,16 +58,16 @@ def demo(args):
     bw_flow_data_root = '/D_data/Seg/data/PSEG_flow_bw'
 
     datasets = ['blender_old', 'gen_mobilenet', 'turk_test']
-    dataset = 'turk_test'
-    mode = 'bw'
-    print(f"dataset {dataset} mode {mode}")
+    assert args.dataset in datasets
+    assert args.mode in ['bw', 'fw']
+    print(f"dataset {args.dataset} mode {args.mode}")
     with torch.no_grad():
-        jpeg_path = os.path.join(dataset_root, dataset, 'JPEGImages', '480p')
+        jpeg_path = os.path.join(dataset_root, args.dataset, 'JPEGImages', '480p')
 
-        if dataset == 'blender_old' or dataset == 'turk_test':
+        if args.dataset == 'blender_old' or args.dataset == 'turk_test':
             sequences = sorted(os.listdir(jpeg_path))
 
-            for i, seq in tqdm(enumerate(sequences)):
+            for i, seq in tqdm(enumerate(sequences), total=len(sequences)):
                 seq_path = os.path.join(jpeg_path, seq)
                 fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
                 bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
@@ -79,7 +79,7 @@ def demo(args):
 
                 images = sorted(images)
 
-                if mode == 'fw':
+                if args.mode == 'fw':
                     for imfile1, imfile2 in tzip(images[:-1], images[1:]):
                         image1 = load_image(imfile1)
                         image2 = load_image(imfile2)
@@ -92,7 +92,7 @@ def demo(args):
                         fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root)
                         viz(image1, fw_flow_up, fw_out_imfile1)
 
-                elif mode == 'bw':
+                elif args.mode == 'bw':
                     for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False):
                         image_p = load_image(imfile_p)
                         image_c = load_image(imfile_c)
@@ -105,23 +105,22 @@ def demo(args):
                         bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root)
                         viz(image_c, bw_flow_up, bw_out_imfile1)
 
-        elif dataset == 'gen_mobilenet':
+        elif args.dataset == 'gen_mobilenet':
             challenges = sorted(os.listdir(jpeg_path))
-            for cha in tqdm(challenges):
+            for cha in tqdm(challenges, total=len(challenges)):
                 sequences = sorted(os.listdir(os.path.join(jpeg_path, cha)))
-                for i, seq in tqdm(enumerate(sequences)):
+                for i, seq in tqdm(enumerate(sequences), total=len(sequences)):
                     seq_path = os.path.join(jpeg_path, cha, seq)
                     fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
                     bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
                     images = glob.glob(os.path.join(seq_path, '*.png')) + glob.glob(os.path.join(seq_path, '*.jpg'))
-
 
                     os.makedirs(fw_output_seq_path, exist_ok=True)
                     os.makedirs(bw_output_seq_path, exist_ok=True)
 
                     images = sorted(images)
 
-                    if mode == 'fw':
+                    if args.mode == 'fw':
                         for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False):
                             image1 = load_image(imfile1)
                             image2 = load_image(imfile2)
@@ -134,7 +133,7 @@ def demo(args):
                             fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root)
                             viz(image1, fw_flow_up, fw_out_imfile1)
 
-                    elif mode == 'bw':
+                    elif args.mode == 'bw':
                         for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False):
                             image_p = load_image(imfile_p)
                             image_c = load_image(imfile_c)
@@ -152,7 +151,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', help="restore checkpoint", default='models/raft-things.pth')
     parser.add_argument('--path', help="dataset for evaluation")
-    parser.add_argument('--stage', help="forward or backward")
+    parser.add_argument('--mode', help="forward or backward")
+    parser.add_argument('--dataset', help='dataset')
     parser.add_argument('--fw_output_path', help="output path for evaluation")
     parser.add_argument('--bw_output_path', help="output path for evaluation")
     parser.add_argument('--small', action='store_true', help='use small model')

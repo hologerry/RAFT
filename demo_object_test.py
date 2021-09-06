@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import time
 
 
 import cv2
@@ -8,7 +9,7 @@ import numpy as np
 from tqdm.contrib import tzip
 import torch
 from PIL import Image
-from skimage.io import imsave
+from cv2 import imwrite
 
 from core.raft import RAFT
 from core.utils import flow_viz
@@ -18,6 +19,7 @@ from core.utils.utils import InputPadder
 DEVICE = 'cuda'
 
 
+
 def load_image(imfile):
     img = np.array(Image.open(imfile)).astype(np.uint8)
     img = torch.from_numpy(img).permute(2, 0, 1).float()
@@ -25,13 +27,18 @@ def load_image(imfile):
 
 
 def viz(img, flo, out_imfile):
+    time_in = time.time()
     img = img[0].permute(1, 2, 0).cpu().numpy()
     flo = flo[0].permute(1, 2, 0).cpu().numpy()
 
     # map flow to rgb image
     flo = flow_viz.flow_to_image(flo)
+    time_convert = time.time()
+    print("flow to image", time_convert - time_in)
     out_filename = out_imfile.replace(".jpg", '.png')
-    imsave(out_filename, flo)
+    imwrite(out_filename, flo)
+    time_save = time.time()
+    print("time saving image", time_save - time_convert)
     # img_flo = np.concatenate([img, flo], axis=0)
 
     # import matplotlib.pyplot as plt
@@ -59,20 +66,30 @@ def demo(args):
         images = glob.glob(os.path.join(args.path, '*.png')) + \
             glob.glob(os.path.join(args.path, '*.jpg'))
 
-        images = sorted(images)
+        images = sorted(images)[:10]
 
         if args.stage == 'fw':
             for imfile1, imfile2 in tzip(images[:-1], images[1:]):
+                time_s = time.time()
                 image1 = load_image(imfile1)
                 image2 = load_image(imfile2)
+                time_data = time.time()
+                print("data loading", time_data - time_s)
 
                 padder = InputPadder(image1.shape)
                 image1, image2 = padder.pad(image1, image2)
+                time_data_processing = time.time()
+                print("data processing", time_data_processing - time_data)
 
                 fw_flow_low, fw_flow_up = model(image1, image2, iters=args.iters, test_mode=True)
+                torch.cuda.synchronize()
+                time_flow = time.time()
+                print("flow prediction", time_flow - time_data_processing, "iters", args.iters)
 
                 fw_out_imfile1 = imfile1.replace(args.path, args.fw_output_path)
                 viz(image1, fw_flow_up, fw_out_imfile1)
+                time_save = time.time()
+                print("saving", time_save - time_flow)
 
         elif args.stage == 'bw':
             for imfile_p, imfile_c in (tzip(images[:-1], images[1:])):
