@@ -80,8 +80,8 @@ def generate(args, dataset, mode, device):
                         fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
                         if os.path.exists(fw_out_imfile1):
                             continue
-                        image1 = load_image(imfile1)
-                        image2 = load_image(imfile2)
+                        image1 = load_image(imfile1, device)
+                        image2 = load_image(imfile2, device)
 
                         padder = InputPadder(image1.shape)
                         image1, image2 = padder.pad(image1, image2)
@@ -95,8 +95,8 @@ def generate(args, dataset, mode, device):
                         bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root).replace(".jpg", '.png')
                         if os.path.exists(bw_out_imfile1):
                             continue
-                        image_p = load_image(imfile_p)
-                        image_c = load_image(imfile_c)
+                        image_p = load_image(imfile_p, device)
+                        image_c = load_image(imfile_c, device)
 
                         padder = InputPadder(image_p.shape)
                         image_p, image_c = padder.pad(image_p, image_c)
@@ -125,8 +125,8 @@ def generate(args, dataset, mode, device):
                             fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
                             if os.path.exists(fw_out_imfile1):
                                 continue
-                            image1 = load_image(imfile1)
-                            image2 = load_image(imfile2)
+                            image1 = load_image(imfile1, device)
+                            image2 = load_image(imfile2, device)
 
                             padder = InputPadder(image1.shape)
                             image1, image2 = padder.pad(image1, image2)
@@ -140,8 +140,8 @@ def generate(args, dataset, mode, device):
                             bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root).replace(".jpg", '.png')
                             if os.path.exists(bw_out_imfile1):
                                 continue
-                            image_p = load_image(imfile_p)
-                            image_c = load_image(imfile_c)
+                            image_p = load_image(imfile_p, device)
+                            image_c = load_image(imfile_c, device)
 
                             padder = InputPadder(image_p.shape)
                             image_p, image_c = padder.pad(image_p, image_c)
