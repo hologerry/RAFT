@@ -43,7 +43,7 @@ def viz(img, flo, out_imfile):
 def generate(args, dataset, mode, device):
 
     model = torch.nn.DataParallel(RAFT(args))
-    model.load_state_dict(torch.load(args.model))
+    model.load_state_dict(torch.load(model))
 
     model = model.module
     model.to(device)
@@ -75,7 +75,7 @@ def generate(args, dataset, mode, device):
 
                 images = sorted(images)
 
-                if args.mode == 'fw':
+                if mode == 'fw':
                     for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} sequence {seq}'):
                         fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
                         if os.path.exists(fw_out_imfile1):
@@ -90,7 +90,7 @@ def generate(args, dataset, mode, device):
 
                         viz(image1, fw_flow_up, fw_out_imfile1)
 
-                elif args.mode == 'bw':
+                elif mode == 'bw':
                     for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} sequence {seq}'):
                         bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root).replace(".jpg", '.png')
                         if os.path.exists(bw_out_imfile1):
@@ -120,7 +120,7 @@ def generate(args, dataset, mode, device):
 
                     images = sorted(images)
 
-                    if args.mode == 'fw':
+                    if mode == 'fw':
                         for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} challenge {cha} sequence {seq}'):
                             fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
                             if os.path.exists(fw_out_imfile1):
@@ -135,7 +135,7 @@ def generate(args, dataset, mode, device):
 
                             viz(image1, fw_flow_up, fw_out_imfile1)
 
-                    elif args.mode == 'bw':
+                    elif mode == 'bw':
                         for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} challenge {cha} sequence {seq}'):
                             bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root).replace(".jpg", '.png')
                             if os.path.exists(bw_out_imfile1):
