@@ -24,9 +24,12 @@ modes =  ['bw', 'fw']
 process_num = len(datasets) * len(modes)
 
 def process_files(process_id, datasets, modes, args):
-    dataset = datasets[process_id]
-    mode = modes[process_id]
+    mode_idx = process_id % len(modes)
+    dataset_idx = process_id // len(modes)
+    dataset = datasets[dataset_idx]
+    mode = modes[mode_idx]
     device = f'cuda:{process_id}'
+    print(f"process {process_id}, dataset {dataset}, mode {mode}")
     generate(args, dataset, mode, device)
 
 
