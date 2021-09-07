@@ -42,7 +42,7 @@ def viz(img, flo, out_imfile):
 
 def generate(args, dataset, mode, device):
 
-    model = torch.nn.DataParallel(RAFT(args))
+    model = RAFT(args))
     model.load_state_dict(torch.load(model))
 
     model = model.module
