@@ -63,7 +63,7 @@ def generate(args, dataset, mode, device):
         if dataset == 'blender_old' or dataset == 'turk_test':
             sequences = sorted(os.listdir(jpeg_path))
 
-            for i, seq in tqdm(enumerate(sequences), total=len(sequences), desc=f'dataset {dataset} sequences'):
+            for i, seq in tqdm(enumerate(sequences), total=len(sequences), desc=f'dataset {dataset} mode {mode} sequences'):
                 seq_path = os.path.join(jpeg_path, seq)
                 fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
                 bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
@@ -76,7 +76,7 @@ def generate(args, dataset, mode, device):
                 images = sorted(images)
 
                 if args.mode == 'fw':
-                    for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} sequence {seq}'):
+                    for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} sequence {seq}'):
                         fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
                         if os.path.exists(fw_out_imfile1):
                             continue
@@ -91,7 +91,7 @@ def generate(args, dataset, mode, device):
                         viz(image1, fw_flow_up, fw_out_imfile1)
 
                 elif args.mode == 'bw':
-                    for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} sequence {seq}'):
+                    for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} sequence {seq}'):
                         bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root).replace(".jpg", '.png')
                         if os.path.exists(bw_out_imfile1):
                             continue
@@ -107,9 +107,9 @@ def generate(args, dataset, mode, device):
 
         elif dataset == 'gen_mobilenet':
             challenges = sorted(os.listdir(jpeg_path))
-            for cha in tqdm(challenges, total=len(challenges), desc=f'dataset {dataset} challenges'):
+            for cha in tqdm(challenges, total=len(challenges), desc=f'dataset {dataset} mode {mode} challenges'):
                 sequences = sorted(os.listdir(os.path.join(jpeg_path, cha)))
-                for i, seq in tqdm(enumerate(sequences), total=len(sequences), desc=f'dataset {dataset} challenge {cha} sequences'):
+                for i, seq in tqdm(enumerate(sequences), total=len(sequences), desc=f'dataset {dataset} mode {mode} challenge {cha} sequences'):
                     seq_path = os.path.join(jpeg_path, cha, seq)
                     fw_output_seq_path = seq_path.replace(dataset_root, fw_flow_data_root)
                     bw_output_seq_path = seq_path.replace(dataset_root, bw_flow_data_root)
@@ -121,7 +121,7 @@ def generate(args, dataset, mode, device):
                     images = sorted(images)
 
                     if args.mode == 'fw':
-                        for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} challenge {cha} sequence {seq}'):
+                        for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} challenge {cha} sequence {seq}'):
                             fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
                             if os.path.exists(fw_out_imfile1):
                                 continue
@@ -136,7 +136,7 @@ def generate(args, dataset, mode, device):
                             viz(image1, fw_flow_up, fw_out_imfile1)
 
                     elif args.mode == 'bw':
-                        for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} challenge {cha} sequence {seq}'):
+                        for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} challenge {cha} sequence {seq}'):
                             bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root).replace(".jpg", '.png')
                             if os.path.exists(bw_out_imfile1):
                                 continue
