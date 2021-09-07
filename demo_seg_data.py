@@ -31,8 +31,7 @@ def viz(img, flo, out_imfile):
 
     # map flow to rgb image
     flo = flow_viz.flow_to_image(flo)
-    out_filename = out_imfile.replace(".jpg", '.png')
-    imwrite(out_filename, flo)
+    imwrite(out_imfile, flo)
     # img_flo = np.concatenate([img, flo], axis=0)
 
     # import matplotlib.pyplot as plt
@@ -81,6 +80,9 @@ def demo(args):
 
                 if args.mode == 'fw':
                     for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False):
+                        fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
+                        if os.path.exists(fw_flow_data_root):
+                            continue
                         image1 = load_image(imfile1)
                         image2 = load_image(imfile2)
 
@@ -89,11 +91,13 @@ def demo(args):
 
                         fw_flow_low, fw_flow_up = model(image1, image2, iters=20, test_mode=True)
 
-                        fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root)
                         viz(image1, fw_flow_up, fw_out_imfile1)
 
                 elif args.mode == 'bw':
                     for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False):
+                        bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root).replace(".jpg", '.png')
+                        if os.path.exists(bw_out_imfile1):
+                            continue
                         image_p = load_image(imfile_p)
                         image_c = load_image(imfile_c)
 
@@ -102,7 +106,6 @@ def demo(args):
 
                         bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
 
-                        bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root)
                         viz(image_c, bw_flow_up, bw_out_imfile1)
 
         elif args.dataset == 'gen_mobilenet':
@@ -122,6 +125,9 @@ def demo(args):
 
                     if args.mode == 'fw':
                         for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False):
+                            fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
+                            if os.path.exists(fw_flow_data_root):
+                                continue
                             image1 = load_image(imfile1)
                             image2 = load_image(imfile2)
 
@@ -130,11 +136,13 @@ def demo(args):
 
                             fw_flow_low, fw_flow_up = model(image1, image2, iters=20, test_mode=True)
 
-                            fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root)
                             viz(image1, fw_flow_up, fw_out_imfile1)
 
                     elif args.mode == 'bw':
                         for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False):
+                            bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root).replace(".jpg", '.png')
+                            if os.path.exists(bw_out_imfile1):
+                                continue
                             image_p = load_image(imfile_p)
                             image_c = load_image(imfile_c)
 
@@ -142,8 +150,6 @@ def demo(args):
                             image_p, image_c = padder.pad(image_p, image_c)
 
                             bw_flow_low, bw_flow_up = model(image_c, image_p, iters=20, test_mode=True)
-
-                            bw_out_imfile1 = imfile_c.replace(dataset_root, bw_flow_data_root)
                             viz(image_c, bw_flow_up, bw_out_imfile1)
 
 
