@@ -78,7 +78,7 @@ def generate(args, dataset, mode, device):
                 if args.mode == 'fw':
                     for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} sequence {seq}'):
                         fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
-                        if os.path.exists(fw_flow_data_root):
+                        if os.path.exists(fw_out_imfile1):
                             continue
                         image1 = load_image(imfile1)
                         image2 = load_image(imfile2)
@@ -123,7 +123,7 @@ def generate(args, dataset, mode, device):
                     if args.mode == 'fw':
                         for imfile1, imfile2 in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} challenge {cha} sequence {seq}'):
                             fw_out_imfile1 = imfile1.replace(dataset_root, fw_flow_data_root).replace(".jpg", '.png')
-                            if os.path.exists(fw_flow_data_root):
+                            if os.path.exists(fw_out_imfile1):
                                 continue
                             image1 = load_image(imfile1)
                             image2 = load_image(imfile2)
