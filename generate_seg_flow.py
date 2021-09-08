@@ -40,7 +40,7 @@ def viz(img, flo, out_imfile):
     # cv2.waitKey()
 
 
-def generate(args, dataset, mode, device):
+def generate(args, dataset, mode, device, data_root):
 
     model = torch.nn.DataParallel(RAFT(args))
     model.load_state_dict(torch.load(args.model))
@@ -49,9 +49,9 @@ def generate(args, dataset, mode, device):
     model.to(device)
     model.eval()
 
-    dataset_root = './data/PSEG'
-    fw_flow_data_root = './data/PSEG_flow_fw'
-    bw_flow_data_root = './data/PSEG_flow_bw'
+    dataset_root = f'./data/{data_root}'
+    fw_flow_data_root = f'./data/{data_root}_flow_fw'
+    bw_flow_data_root = f'./data/{data_root}_flow_bw'
 
     datasets = ['blender_old', 'gen_mobilenet', 'turk_test']
     assert dataset in datasets

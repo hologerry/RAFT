@@ -7,7 +7,7 @@ from generate_seg_flow import generate
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', help="restore checkpoint", default='RAFT/models/raft-things.pth')
-parser.add_argument('--path', help="dataset for evaluation")
+parser.add_argument('--path', help="dataset for evaluation", default='PSEG')
 parser.add_argument('--mode', help="forward or backward")
 parser.add_argument('--dataset', help='dataset')
 parser.add_argument('--fw_output_path', help="output path for evaluation")
@@ -17,24 +17,24 @@ parser.add_argument('--mixed_precision', action='store_true', help='use mixed pr
 parser.add_argument('--alternate_corr', action='store_true', help='use efficient correlation implementation')
 args = parser.parse_args()
 
-
+data_root = args.path
 datasets = ['blender_old', 'gen_mobilenet', 'turk_test']
 modes =  ['bw', 'fw']
 
 process_num = len(datasets) * len(modes)
 
-def process_files(process_id, datasets, modes, args):
+def process_files(process_id, datasets, modes, args, data_root):
     mode_idx = process_id % len(modes)
     dataset_idx = process_id // len(modes)
     dataset = datasets[dataset_idx]
     mode = modes[mode_idx]
     device = f'cuda:{process_id}'
     print(f"process {process_id}, dataset {dataset}, mode {mode}")
-    generate(args, dataset, mode, device)
+    generate(args, dataset, mode, device, data_root)
 
 
 processes = [mp.Process(target=process_files,
-                        args=(process_id, datasets, modes, args))
+                        args=(process_id, datasets, modes, args, data_root))
                         for process_id in range(process_num)]
 
 # Run processes
