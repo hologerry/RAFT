@@ -13,6 +13,7 @@ class FlowHead(nn.Module):
     def forward(self, x):
         return self.conv2(self.relu(self.conv1(x)))
 
+
 class ConvGRU(nn.Module):
     def __init__(self, hidden_dim=128, input_dim=192+128):
         super(ConvGRU, self).__init__()
@@ -29,6 +30,7 @@ class ConvGRU(nn.Module):
 
         h = (1-z) * h + z * q
         return h
+
 
 class SepConvGRU(nn.Module):
     def __init__(self, hidden_dim=128, input_dim=192+128):
@@ -59,6 +61,7 @@ class SepConvGRU(nn.Module):
 
         return h
 
+
 class SmallMotionEncoder(nn.Module):
     def __init__(self, args):
         super(SmallMotionEncoder, self).__init__()
@@ -75,6 +78,7 @@ class SmallMotionEncoder(nn.Module):
         cor_flo = torch.cat([cor, flo], dim=1)
         out = F.relu(self.conv(cor_flo))
         return torch.cat([out, flow], dim=1)
+
 
 class BasicMotionEncoder(nn.Module):
     def __init__(self, args):
@@ -95,6 +99,7 @@ class BasicMotionEncoder(nn.Module):
         cor_flo = torch.cat([cor, flo], dim=1)
         out = F.relu(self.conv(cor_flo))
         return torch.cat([out, flow], dim=1)
+
 
 class SmallUpdateBlock(nn.Module):
     def __init__(self, args, hidden_dim=96):
