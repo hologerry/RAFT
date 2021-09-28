@@ -14,6 +14,7 @@ from cv2 import imwrite, imread
 from core.raft import RAFT
 from core.utils import flow_viz
 from core.utils.utils import InputPadder
+from core.utils.frame_utils import writeFlow
 
 
 def load_image(imfile, device):
@@ -41,7 +42,7 @@ def viz(img, flo, out_imfile):
 
 def save_flow(flo, out_flowfile):
     flo = flo[0].permute(1, 2, 0).cpu().numpy()
-    np.save(out_flowfile, flo)
+    writeFlow(out_flowfile, flo)
 
 
 def generate(args, dataset, mode, device, data_root):
@@ -113,7 +114,7 @@ def generate(args, dataset, mode, device, data_root):
 
                 elif mode == 'fw_t-1->t':
                     for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} sequence {seq}'):
-                        fwt_out_flowfile1 = imfile_c.replace(dataset_root, fwt_flow_data_root).replace(".jpg", '.npy')
+                        fwt_out_flowfile1 = imfile_c.replace(dataset_root, fwt_flow_data_root).replace(".jpg", '.flo')
                         if os.path.exists(fwt_out_flowfile1):
                             continue
                         image_p = load_image(imfile_p, device)
@@ -175,7 +176,7 @@ def generate(args, dataset, mode, device, data_root):
 
                     elif mode == 'fw_t-1->t':
                         for imfile_p, imfile_c in tzip(images[:-1], images[1:], leave=False, desc=f'dataset {dataset} mode {mode} sequence {seq}'):
-                            fwt_out_flowfile1 = imfile_c.replace(dataset_root, fwt_flow_data_root).replace(".jpg", '.npy')
+                            fwt_out_flowfile1 = imfile_c.replace(dataset_root, fwt_flow_data_root).replace(".jpg", '.flo')
                             if os.path.exists(fwt_out_flowfile1):
                                 continue
                             image_p = load_image(imfile_p, device)

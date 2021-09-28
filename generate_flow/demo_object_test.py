@@ -14,7 +14,7 @@ from cv2 import imwrite
 from core.raft import RAFT
 from core.utils import flow_viz
 from core.utils.utils import InputPadder
-
+from core.utils.frame_utils import writeFlow
 
 DEVICE = 'cuda'
 
@@ -50,6 +50,11 @@ def viz(img, flo, out_imfile):
     # cv2.waitKey()
 
 
+def save_flow(flo, out_flowfile):
+    flo = flo[0].permute(1, 2, 0).cpu().numpy()
+    writeFlow(out_flowfile, flo)
+
+
 def demo(args):
 
     model = torch.nn.DataParallel(RAFT(args))
@@ -66,7 +71,7 @@ def demo(args):
         images = glob.glob(os.path.join(args.path, '*.png')) + \
             glob.glob(os.path.join(args.path, '*.jpg'))
 
-        images = sorted(images)[:10]
+        images = sorted(images)
 
         if args.stage == 'fw':
             for imfile1, imfile2 in tzip(images[:-1], images[1:]):
@@ -104,11 +109,25 @@ def demo(args):
                 bw_out_imfile1 = imfile_c.replace(args.path, args.bw_output_path)
                 viz(image_c, bw_flow_up, bw_out_imfile1)
 
+        elif args.stage == 'fwt':
+            for imfile_p, imfile_c in tzip(images[:-1], images[1:]):
+                fwt_out_flowfile1 = imfile_c.replace('img', 'fwt_flow').replace(".jpg", '.flo')
+
+                image_p = load_image(imfile_p)
+                image_c = load_image(imfile_c)
+
+                padder = InputPadder(image_p.shape)
+                image_p, image_c = padder.pad(image_p, image_c)
+
+                fwt_flow_low, fwt_flow_up = model(image_p, image_c, iters=20, test_mode=True)
+
+                save_flow(fwt_flow_up, fwt_out_flowfile1)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', help="restore checkpoint", default='models/raft-things.pth')
-    parser.add_argument('--path', help="dataset for evaluation", default='/D_data/Seg/object_test_raw_data/frames')
+    parser.add_argument('--model', help="restore checkpoint", default='models/raft-kitti.pth')
+    parser.add_argument('--path', help="dataset for evaluation", default='/D_data/Seg/data/object_test/img')
     parser.add_argument('--stage', help="forward or backward", default='fw')
     parser.add_argument('--fw_output_path', help="output path for evaluation")
     parser.add_argument('--bw_output_path', help="output path for evaluation")
@@ -117,7 +136,7 @@ if __name__ == '__main__':
     parser.add_argument('--iters', type=int, help="iterations for raft", default=20)
     parser.add_argument('--alternate_corr', action='store_true', help='use efficient correlation implementation')
     args = parser.parse_args()
-    args.fw_output_path = args.path.replace('object_test_raw_data/frames', f'object_test_raft_output_fw_iter{args.iters}/things')
-    args.bw_output_path = args.path.replace('object_test_raw_data/frames', f'object_test_raft_output_bw_iter{args.iters}/things')
+    args.fw_output_path = args.path.replace('object_test_raw_data/frames', f'object_test_raft_output_fw_iter{args.iters}/kitti')
+    args.bw_output_path = args.path.replace('object_test_raw_data/frames', f'object_test_raft_output_bw_iter{args.iters}/kitti')
 
     demo(args)

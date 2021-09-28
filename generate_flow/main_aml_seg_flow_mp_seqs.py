@@ -2,7 +2,7 @@ import argparse
 import multiprocessing as mp
 import os
 
-from generate_seg_flow import generate
+from .generate_seg_flow_seqs import generate
 
 
 parser = argparse.ArgumentParser()
@@ -21,17 +21,22 @@ data_root = args.path
 datasets = ['gen_mobilenet']
 # modes =  ['bw', 'fw']
 modes = ['fw_t-1->t']
+challenges = ['Turkdata_201911', 'Youtube2']
 
-process_num = len(datasets) * len(modes)
+process_num = 2
 
 def process_files(process_id, datasets, modes, args, data_root):
-    mode_idx = process_id % len(modes)
-    dataset_idx = process_id // len(modes)
-    dataset = datasets[dataset_idx]
-    mode = modes[mode_idx]
+    # mode_idx = process_id % len(modes)
+    # dataset_idx = process_id // len(modes)
+    # dataset = datasets[dataset_idx]
+    # mode = modes[mode_idx]
+    dataset = 'gen_mobilenet'
+    mode = 'fw_t-1->t'
+    cha = challenges[process_id]
     device = f'cuda:{process_id%2}'
     print(f"process {process_id}, dataset {dataset}, mode {mode}")
-    generate(args, dataset, mode, device, data_root)
+
+    generate(args, dataset, mode, device, data_root, process_id, cha)
 
 
 processes = [mp.Process(target=process_files,
