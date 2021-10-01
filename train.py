@@ -1,23 +1,21 @@
-import sys
-
 import argparse
 import os
-import cv2
+import sys
 import time
-import numpy as np
-import matplotlib.pyplot as plt
 
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
-
+import torch.optim as optim
 from torch.utils.data import DataLoader
-from core.raft_tiny import RAFTTiny
-import evaluate
-import core.datasets as datasets
-
 from torch.utils.tensorboard import SummaryWriter
+
+import core.datasets as datasets
+import evaluate
+from core.raft_tiny import RAFTTiny
 
 try:
     from torch.cuda.amp import GradScaler

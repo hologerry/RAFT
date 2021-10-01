@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .update import BasicUpdateBlock, SmallUpdateBlock
+from .corr import AlternateCorrBlock, CorrBlock
 from .extractor import BasicEncoder, SmallEncoder
-from .corr import CorrBlock, AlternateCorrBlock
+from .update import BasicUpdateBlock, SmallUpdateBlock
 from .utils.utils import bilinear_sampler, coords_grid, upflow8
 
 try:
@@ -145,8 +145,9 @@ class RAFT(nn.Module):
 
 
 if __name__ == '__main__':
-    from ptflops import get_model_complexity_info
     import argparse
+
+    from ptflops import get_model_complexity_info
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', default='raft', help="name your experiment")

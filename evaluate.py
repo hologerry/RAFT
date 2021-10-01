@@ -1,19 +1,17 @@
-import sys
-
-from PIL import Image
 import argparse
 import os
+import sys
 import time
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
+from PIL import Image
 
 import core.datasets as datasets
-from core.utils import flow_viz
-from core.utils import frame_utils
-
 from core.raft import RAFT
+from core.utils import flow_viz, frame_utils
 from core.utils.utils import InputPadder, forward_interpolate
 
 
