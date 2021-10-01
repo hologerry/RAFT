@@ -3,10 +3,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .update import BasicUpdateBlock, SmallUpdateBlock
+from .update import BasicUpdateBlock, SmallUpdateBlock, TinyUpdateBlock
 from .extractor import BasicEncoder, SmallEncoder
 from .corr import CorrBlock, AlternateCorrBlock
 from .utils.utils import bilinear_sampler, coords_grid, upflow8
+from .mobilenetv3 import MobileNetV3
 
 try:
     autocast = torch.cuda.amp.autocast
@@ -21,22 +22,15 @@ except:
             pass
 
 
-class RAFT(nn.Module):
+class RAFTTiny(nn.Module):
     def __init__(self, args):
-        super(RAFT, self).__init__()
+        super(RAFTTiny, self).__init__()
         self.args = args
 
-        if args.small:
-            self.hidden_dim = hdim = 96
-            self.context_dim = cdim = 64
-            args.corr_levels = 4
-            args.corr_radius = 3
-
-        else:
-            self.hidden_dim = hdim = 128
-            self.context_dim = cdim = 128
-            args.corr_levels = 4
-            args.corr_radius = 4
+        self.hidden_dim = hdim = 16
+        self.context_dim = 8
+        args.corr_levels = 4
+        args.corr_radius = 3
 
         if 'dropout' not in self.args:
             self.args.dropout = 0
@@ -45,15 +39,10 @@ class RAFT(nn.Module):
             self.args.alternate_corr = False
 
         # feature network, context network, and update block
-        if args.small:
-            self.fnet = SmallEncoder(output_dim=128, norm_fn='instance', dropout=args.dropout)
-            self.cnet = SmallEncoder(output_dim=hdim+cdim, norm_fn='none', dropout=args.dropout)
-            self.update_block = SmallUpdateBlock(self.args, hidden_dim=hdim)
 
-        else:
-            self.fnet = BasicEncoder(output_dim=256, norm_fn='instance', dropout=args.dropout)
-            self.cnet = BasicEncoder(output_dim=hdim+cdim, norm_fn='batch', dropout=args.dropout)
-            self.update_block = BasicUpdateBlock(self.args, hidden_dim=hdim)
+        self.fnet = MobileNetV3('mobilenet_v3_small', last_stage=3, norm_type='instance')
+        self.cnet = MobileNetV3('mobilenet_v3_small', last_stage=3, norm_type='instance')
+        self.update_block = TinyUpdateBlock(self.args, hidden_dim=hdim)
 
     def freeze_bn(self):
         for m in self.modules():
@@ -83,21 +72,24 @@ class RAFT(nn.Module):
         return up_flow.reshape(N, 2, 8*H, 8*W)
 
 
-    def forward(self, image1, image2, iters=12, flow_init=None, upsample=True, test_mode=False):
+    def forward(self, image1, image2, iters=8, flow_init=None, upsample=True, test_mode=False):
         """ Estimate optical flow between pair of frames """
-
+        # image1, image2 = torch.chunk(x, 2, dim=1)
         image1 = 2 * (image1 / 255.0) - 1.0
         image2 = 2 * (image2 / 255.0) - 1.0
 
         image1 = image1.contiguous()
         image2 = image2.contiguous()
-
+        batch_dim = image1.size(0)
         hdim = self.hidden_dim
         cdim = self.context_dim
 
         # run the feature network
         with autocast(enabled=self.args.mixed_precision):
-            fmap1, fmap2 = self.fnet([image1, image2])
+            image = torch.cat([image1, image2], dim=0)
+            feats = self.fnet(image)
+            fmap = feats['C3']
+            fmap1, fmap2 = torch.split(fmap, [batch_dim, batch_dim], dim=0)
 
         fmap1 = fmap1.float()
         fmap2 = fmap2.float()
@@ -108,10 +100,11 @@ class RAFT(nn.Module):
 
         # run the context network
         with autocast(enabled=self.args.mixed_precision):
-            cnet = self.cnet(image1)
+            cnet_feats = self.cnet(image1)
+            cnet = cnet_feats['C3']
             net, inp = torch.split(cnet, [hdim, cdim], dim=1)
-            net = torch.tanh(net)
-            inp = torch.relu(inp)
+            net = torch.tanh(net)  # 16
+            inp = torch.relu(inp)  # 8
 
         coords0, coords1 = self.initialize_flow(image1)
 
@@ -121,7 +114,7 @@ class RAFT(nn.Module):
         flow_predictions = []
         for itr in range(iters):
             coords1 = coords1.detach()
-            corr = corr_fn(coords1) # index correlation volume
+            corr = corr_fn(coords1)  # index correlation volume, (batch, ht, wd, 1, ht, wd)
 
             flow = coords1 - coords0
             with autocast(enabled=self.args.mixed_precision):
@@ -154,7 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
     args = parser.parse_args()
 
-    net = RAFT(args)
+    net = RAFTTiny(args)
     with torch.cuda.device(0):
         macs, params = get_model_complexity_info(net, (6, 160, 96), as_strings=True, print_per_layer_stat=True, verbose=True)
         print('{:<30}  {:<8}'.format('Computational complexity: ', macs))
@@ -163,9 +156,4 @@ if __name__ == '__main__':
         data = torch.randn((2, 6, 224, 224))
         out = net(data)
 
-    # default
-    # Computational complexity:       12.14 GMac
-    # Number of parameters:           5.26 M  
-    # small
-    # Computational complexity:       2.68 GMac
-    # Number of parameters:           990.16 k
+

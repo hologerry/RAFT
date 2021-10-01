@@ -13,7 +13,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from torch.utils.data import DataLoader
-from core.raft import RAFT
+from core.raft_tiny import RAFTTiny
 import evaluate
 import core.datasets as datasets
 
@@ -94,7 +94,7 @@ class Logger:
 
     def _print_training_status(self):
         metrics_data = [self.running_loss[k]/SUM_FREQ for k in sorted(self.running_loss.keys())]
-        training_str = "[{:6d}, {:10.7f}] ".format(self.total_steps+1, self.scheduler.get_last_lr()[0])
+        training_str = f"[step: {self.total_steps+1:6d}, lr: {self.scheduler.get_last_lr()[0]:10.7f}] "
         metrics_str = ("{:10.4f}, "*len(metrics_data)).format(*metrics_data)
         
         # print the training status
@@ -133,7 +133,7 @@ class Logger:
 
 def train(args):
 
-    model = nn.DataParallel(RAFT(args), device_ids=args.gpus)
+    model = nn.DataParallel(RAFTTiny(args), device_ids=args.gpus)
     print("Parameter Count: %d" % count_parameters(model))
 
     if args.restore_ckpt is not None:

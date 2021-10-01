@@ -101,11 +101,29 @@ class BasicMotionEncoder(nn.Module):
         return torch.cat([out, flow], dim=1)
 
 
+class TinyMotionEncoder(nn.Module):
+    def __init__(self, args):
+        super(TinyMotionEncoder, self).__init__()
+        cor_planes = args.corr_levels * (2*args.corr_radius + 1)**2
+        self.convc1 = nn.Conv2d(cor_planes, 24, 1, padding=0)
+        self.convf1 = nn.Conv2d(2, 16, 7, padding=3)
+        self.convf2 = nn.Conv2d(16, 8, 3, padding=1)
+        self.conv = nn.Conv2d(32, 20, 3, padding=1)
+
+    def forward(self, flow, corr):
+        cor = F.relu(self.convc1(corr))
+        flo = F.relu(self.convf1(flow))
+        flo = F.relu(self.convf2(flo))
+        cor_flo = torch.cat([cor, flo], dim=1)
+        out = F.relu(self.conv(cor_flo))
+        return torch.cat([out, flow], dim=1)
+
+
 class SmallUpdateBlock(nn.Module):
     def __init__(self, args, hidden_dim=96):
         super(SmallUpdateBlock, self).__init__()
         self.encoder = SmallMotionEncoder(args)
-        self.gru = ConvGRU(hidden_dim=hidden_dim, input_dim=82+64)
+        self.gru = ConvGRU(hidden_dim=hidden_dim, input_dim=84+64)
         self.flow_head = FlowHead(hidden_dim, hidden_dim=128)
 
     def forward(self, net, inp, corr, flow):
@@ -115,6 +133,7 @@ class SmallUpdateBlock(nn.Module):
         delta_flow = self.flow_head(net)
 
         return net, None, delta_flow
+
 
 class BasicUpdateBlock(nn.Module):
     def __init__(self, args, hidden_dim=128, input_dim=128):
@@ -141,4 +160,17 @@ class BasicUpdateBlock(nn.Module):
         return net, mask, delta_flow
 
 
+class TinyUpdateBlock(nn.Module):
+    def __init__(self, args, hidden_dim=16):
+        super(TinyUpdateBlock, self).__init__()
+        self.encoder = TinyMotionEncoder(args)
+        self.gru = ConvGRU(hidden_dim=hidden_dim, input_dim=8+20+2)
+        self.flow_head = FlowHead(hidden_dim, hidden_dim=24)
 
+    def forward(self, net, inp, corr, flow):
+        motion_features = self.encoder(flow, corr)
+        inp = torch.cat([inp, motion_features], dim=1)
+        net = self.gru(net, inp)
+        delta_flow = self.flow_head(net)
+
+        return net, None, delta_flow
