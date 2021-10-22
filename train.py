@@ -16,6 +16,9 @@ from torch.utils.tensorboard import SummaryWriter
 import core.datasets as datasets
 import evaluate
 from core.raft_tiny import RAFTTiny
+from core.raft import RAFT
+from core.pwc_tiny import PWCTiny
+
 
 try:
     from torch.cuda.amp import GradScaler
@@ -36,8 +39,7 @@ except:
 
 # exclude extremely large displacements
 MAX_FLOW = 400
-SUM_FREQ = 100
-VAL_FREQ = 5000
+
 
 
 def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=MAX_FLOW):
@@ -68,6 +70,32 @@ def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=MAX_FLOW):
     return flow_loss, metrics
 
 
+def multi_scale_loss(flow_preds, flow_gt, valid, weights=[0.5, 0.32, 0.08, 0.02, 0.01, 0.005], gamma=0.8, max_flow=MAX_FLOW):
+    assert len(flow_preds) == len(weights) == 5  # 0, 2, 3, 4, 5
+    levels = [0] + [i for i in range(2, 6)]
+
+    flow_loss = 0.0
+    _, _, h, w = flow_gt.shape
+    for level, flow_pred, weight in zip(levels, flow_preds, weights):
+        level_size = (h // (2**level), w // (2**level))
+        scale_flow_gt = F.interpolate(flow_gt / 20.0, size=level_size, mode='bilinear', align_corners=True)
+        loss = (flow_pred - scale_flow_gt).abs()
+        flow_loss += weight * (valid[:, None] * loss).mean()
+
+
+    epe = torch.sum((flow_preds[0] - flow_gt)**2, dim=1).sqrt()
+    epe = epe.view(-1)[valid.view(-1)]
+
+    metrics = {
+        'epe': epe.mean().item(),
+        '1px': (epe < 1).float().mean().item(),
+        '3px': (epe < 3).float().mean().item(),
+        '5px': (epe < 5).float().mean().item(),
+    }
+
+    return flow_loss, metrics
+
+
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -83,15 +111,16 @@ def fetch_optimizer(args, model):
 
 
 class Logger:
-    def __init__(self, model, scheduler):
+    def __init__(self, model, scheduler, summary_freq):
         self.model = model
         self.scheduler = scheduler
+        self.summary_freq = summary_freq
         self.total_steps = 0
         self.running_loss = {}
         self.writer = None
 
     def _print_training_status(self):
-        metrics_data = [self.running_loss[k]/SUM_FREQ for k in sorted(self.running_loss.keys())]
+        metrics_data = [self.running_loss[k]/self.summary_freq for k in sorted(self.running_loss.keys())]
         training_str = f"[step: {self.total_steps+1:6d}, lr: {self.scheduler.get_last_lr()[0]:10.7f}] "
         metrics_str = ("{:10.4f}, "*len(metrics_data)).format(*metrics_data)
 
@@ -102,7 +131,7 @@ class Logger:
             self.writer = SummaryWriter()
 
         for k in self.running_loss:
-            self.writer.add_scalar(k, self.running_loss[k]/SUM_FREQ, self.total_steps)
+            self.writer.add_scalar(k, self.running_loss[k]/self.summary_freq, self.total_steps)
             self.running_loss[k] = 0.0
 
     def push(self, metrics):
@@ -114,7 +143,7 @@ class Logger:
 
             self.running_loss[key] += metrics[key]
 
-        if self.total_steps % SUM_FREQ == SUM_FREQ-1:
+        if self.total_steps % self.summary_freq == self.summary_freq-1:
             self._print_training_status()
             self.running_loss = {}
 
@@ -129,13 +158,27 @@ class Logger:
         self.writer.close()
 
 
-def train(args):
+def build_model(args):
+    if args.model == 'raft':
+        model = RAFT(args)
+    elif args.model == 'raft_tiny':
+        model = RAFTTiny(args)
+    elif args.model == 'pwc_tiny':
+        model = PWCTiny(args)
+    else:
+        raise NotImplementedError
+    return nn.DataParallel(model, device_ids=args.gpus)
 
-    model = nn.DataParallel(RAFTTiny(args), device_ids=args.gpus)
+
+def train(args):
+    model = build_model(args)
     print("Parameter Count: %d" % count_parameters(model))
 
     if args.restore_ckpt is not None:
         model.load_state_dict(torch.load(args.restore_ckpt), strict=False)
+
+    checkpoint_dir = os.path.join(args.output_dir, args.model+"_default")
+    os.makedirs(checkpoint_dir, exist_ok=True)
 
     model.cuda()
     model.train()
@@ -148,9 +191,8 @@ def train(args):
 
     total_steps = 0
     scaler = GradScaler(enabled=args.mixed_precision)
-    logger = Logger(model, scheduler)
+    logger = Logger(model, scheduler, args.summary_freq)
 
-    VAL_FREQ = 5000
     add_noise = True
 
     should_keep_training = True
@@ -167,7 +209,10 @@ def train(args):
 
             flow_predictions = model(image1, image2, iters=args.iters)
 
-            loss, metrics = sequence_loss(flow_predictions, flow, valid, args.gamma)
+            if args.model == 'pwc_tiny':
+                loss, metrics = multi_scale_loss(flow_predictions, flow, valid, args.gamma)
+            else:
+                loss, metrics = sequence_loss(flow_predictions, flow, valid, args.gamma)
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
@@ -178,9 +223,9 @@ def train(args):
 
             logger.push(metrics)
 
-            if total_steps % VAL_FREQ == VAL_FREQ - 1:
-                PATH = 'checkpoints/%d_%s.pth' % (total_steps+1, args.name)
-                torch.save(model.state_dict(), PATH)
+            if total_steps % args.val_freq == args.val_freq - 1:
+                checkpoint_file = os.path.join(checkpoint_dir, f'{total_steps+1}_{args.name}.pth')
+                torch.save(model.state_dict(), checkpoint_file)
 
                 results = {}
                 for val_dataset in args.validation:
@@ -204,10 +249,10 @@ def train(args):
                 break
 
     logger.close()
-    PATH = 'checkpoints/%s.pth' % args.name
-    torch.save(model.state_dict(), PATH)
+    checkpoint_file = os.path.join(checkpoint_dir, f'{args.name}.pth')
+    torch.save(model.state_dict(), checkpoint_file)
 
-    return PATH
+    return checkpoint_file
 
 
 if __name__ == '__main__':
@@ -218,14 +263,19 @@ if __name__ == '__main__':
     parser.add_argument('--small', action='store_true', help='use small model')
     parser.add_argument('--validation', type=str, nargs='+')
 
+    parser.add_argument('--model', type=str, default='raft')
+
     parser.add_argument('--lr', type=float, default=0.00002)
     parser.add_argument('--num_steps', type=int, default=100000)
+    parser.add_argument('--summary_freq', type=int, default=100)
+    parser.add_argument('--val_freq', type=int, default=5000)
     parser.add_argument('--batch_size', type=int, default=6)
     parser.add_argument('--image_size', type=int, nargs='+', default=[384, 512])
     parser.add_argument('--gpus', type=int, nargs='+', default=[0,1])
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
 
-    parser.add_argument('--iters', type=int, default=12)
+    parser.add_argument('--output_dir', type=str, default='raft_output')
+    parser.add_argument('--iters', type=int, default=1)
     parser.add_argument('--wdecay', type=float, default=.00005)
     parser.add_argument('--epsilon', type=float, default=1e-8)
     parser.add_argument('--clip', type=float, default=1.0)
@@ -236,8 +286,5 @@ if __name__ == '__main__':
 
     torch.manual_seed(1234)
     np.random.seed(1234)
-
-    if not os.path.isdir('checkpoints'):
-        os.mkdir('checkpoints')
 
     train(args)

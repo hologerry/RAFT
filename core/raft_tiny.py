@@ -42,6 +42,8 @@ class RAFTTiny(nn.Module):
 
         self.fnet = MobileNetV3('mobilenet_v3_small', last_stage=3, norm_type='instance')
         self.cnet = MobileNetV3('mobilenet_v3_small', last_stage=3, norm_type='instance')
+        # self.fnet = MobileNetV3('mobilenet_v3_small', last_stage=3, norm_type='batch', weights='./weights/mobilenet_v3_small-047dcff4.pth')
+        # self.cnet = MobileNetV3('mobilenet_v3_small', last_stage=3, norm_type='batch', weights='./weights/mobilenet_v3_small-047dcff4.pth')
         self.update_block = TinyUpdateBlock(self.args, hidden_dim=hdim)
 
     def freeze_bn(self):

@@ -11,7 +11,7 @@ import torch
 from PIL import Image
 from cv2 import imwrite
 
-from core.raft import RAFT
+from core.raft_tiny import RAFTTiny
 from core.utils import flow_viz
 from core.utils.utils import InputPadder
 from core.utils.frame_utils import writeFlow
@@ -57,7 +57,7 @@ def save_flow(flo, out_flowfile):
 
 def demo(args):
 
-    model = torch.nn.DataParallel(RAFT(args))
+    model = torch.nn.DataParallel(RAFTTiny(args))
     model.load_state_dict(torch.load(args.model))
 
     model = model.module
@@ -71,7 +71,7 @@ def demo(args):
         images = glob.glob(os.path.join(args.path, '*.png')) + \
             glob.glob(os.path.join(args.path, '*.jpg'))
 
-        images = sorted(images)[2600:]
+        images = sorted(images)
 
         if args.stage == 'fw':
             for imfile1, imfile2 in tzip(images[:-1], images[1:]):
@@ -92,6 +92,7 @@ def demo(args):
                 # print("flow prediction", time_flow - time_data_processing, "iters", args.iters)
 
                 fw_out_imfile1 = imfile1.replace(args.path, args.fw_output_path)
+                # print(fw_out_imfile1)
                 viz(image1, fw_flow_up, fw_out_imfile1)
                 time_save = time.time()
                 # print("saving", time_save - time_flow)
@@ -126,17 +127,17 @@ def demo(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', help="restore checkpoint", default='models/raft-small.pth')
+    parser.add_argument('--model', help="restore checkpoint", default='checkpoints_iter1/raft-kitti.pth')
     parser.add_argument('--path', help="dataset for evaluation", default='/D_data/Seg/data/object_test/img')
     parser.add_argument('--stage', help="forward or backward", default='fw')
     parser.add_argument('--fw_output_path', help="output path for evaluation")
     parser.add_argument('--bw_output_path', help="output path for evaluation")
     parser.add_argument('--small', action='store_true', help='use small model')
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
-    parser.add_argument('--iters', type=int, help="iterations for raft", default=20)
+    parser.add_argument('--iters', type=int, help="iterations for raft", default=10)
     parser.add_argument('--alternate_corr', action='store_true', help='use efficient correlation implementation')
     args = parser.parse_args()
-    args.fw_output_path = args.path.replace('data/object_test/img', f'object_test_raft_output/object_test_raft_small_output_fw_iter{args.iters}/kitti')
-    args.bw_output_path = args.path.replace('data/object_test/img', f'object_test_raft_output/object_test_raft_small_output_bw_iter{args.iters}/kitti')
+    args.fw_output_path = args.path.replace('data/object_test/img', f'object_test_raft_tiny_output/fw_iter{args.iters}_kitti_iter1')
+    args.bw_output_path = args.path.replace('data/object_test/img', f'object_test_raft_tiny_output/bw_iter{args.iters}_kitti_iter1')
 
     demo(args)

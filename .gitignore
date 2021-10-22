@@ -154,4 +154,7 @@ raft_ptflops_small.txt
 raft_tiny_ptflops_8iters.txt
 
 runs
-checkpoints
+checkpoints*
+weights
+raft_output
+

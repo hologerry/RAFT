@@ -123,7 +123,7 @@ class SmallUpdateBlock(nn.Module):
     def __init__(self, args, hidden_dim=96):
         super(SmallUpdateBlock, self).__init__()
         self.encoder = SmallMotionEncoder(args)
-        self.gru = ConvGRU(hidden_dim=hidden_dim, input_dim=84+64)
+        self.gru = ConvGRU(hidden_dim=hidden_dim, input_dim=82+64)
         self.flow_head = FlowHead(hidden_dim, hidden_dim=128)
 
     def forward(self, net, inp, corr, flow):
