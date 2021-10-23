@@ -44,9 +44,9 @@ class PWCTiny(nn.Module):
             if isinstance(m, nn.BatchNorm2d):
                 m.eval()
 
-    def forward(self, x):
+    def forward(self, image1, image2, iters=12, flow_init=None, upsample=True, test_mode=False):
         """ Estimate optical flow between pair of frames """
-        image1, image2 = torch.chunk(x, 2, dim=1)
+        # image1, image2 = torch.chunk(x, 2, dim=1)
         image1 = 2 * (image1 / 255.0) - 1.0
         image2 = 2 * (image2 / 255.0) - 1.0
 
@@ -69,11 +69,10 @@ class PWCTiny(nn.Module):
 
         flow_out = upflow4(flow_2)
 
-        if self.is_training():
+        if not test_mode:
             return flow_out, flow_2, flow_3, flow_4, flow_5
         else:
-            
-            return flow_out * 20.0
+            return flow_out * 20.0, flow_out * 20.0
 
 
 if __name__ == '__main__':
@@ -97,4 +96,5 @@ if __name__ == '__main__':
         data = torch.randn((2, 6, 224, 224)).cuda()
         out = net(data)
 
+        tgt = torch.rand_like(out)
 

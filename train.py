@@ -70,7 +70,7 @@ def sequence_loss(flow_preds, flow_gt, valid, gamma=0.8, max_flow=MAX_FLOW):
     return flow_loss, metrics
 
 
-def multi_scale_loss(flow_preds, flow_gt, valid, weights=[0.5, 0.32, 0.08, 0.02, 0.01, 0.005], gamma=0.8, max_flow=MAX_FLOW):
+def multi_scale_loss(flow_preds, flow_gt, valid, weights=[0.5, 0.32, 0.08, 0.02, 0.01], gamma=0.8, max_flow=MAX_FLOW):
     assert len(flow_preds) == len(weights) == 5  # 0, 2, 3, 4, 5
     levels = [0] + [i for i in range(2, 6)]
 
@@ -79,9 +79,18 @@ def multi_scale_loss(flow_preds, flow_gt, valid, weights=[0.5, 0.32, 0.08, 0.02,
     for level, flow_pred, weight in zip(levels, flow_preds, weights):
         level_size = (h // (2**level), w // (2**level))
         scale_flow_gt = F.interpolate(flow_gt / 20.0, size=level_size, mode='bilinear', align_corners=True)
-        loss = (flow_pred - scale_flow_gt).abs()
-        flow_loss += weight * (valid[:, None] * loss).mean()
+        scale_valid = F.interpolate(valid / 20.0, size=level_size, mode='bilinear', align_corners=True)
 
+        scale_valid = scale_valid.squeeze(1)
+        mag = torch.sum(scale_flow_gt**2, dim=1).sqrt()
+        scale_valid = (scale_valid >= 0.5) & (mag < (max_flow / 20.0))
+        scale_valid = scale_valid.unsqueeze(1)
+        loss = (flow_pred - scale_flow_gt).abs()
+        flow_loss += weight * (scale_valid * loss).mean()
+
+    valid = valid.squeeze(1)
+    mag = torch.sum(flow_gt**2, dim=1).sqrt()
+    valid = (valid >= 0.5) & (mag < max_flow)
 
     epe = torch.sum((flow_preds[0] - flow_gt)**2, dim=1).sqrt()
     epe = epe.view(-1)[valid.view(-1)]
@@ -170,6 +179,18 @@ def build_model(args):
     return nn.DataParallel(model, device_ids=args.gpus)
 
 
+def resize(image1, image2, flow, valid, div=32):
+    new_size_h = image1.shape[2] // div * div
+    new_size_w = image1.shape[3] // div * div
+    image1 = F.interpolate(image1, (new_size_h, new_size_w), mode='bilinear', align_corners=True)
+    image2 = F.interpolate(image2, (new_size_h, new_size_w), mode='bilinear', align_corners=True)
+    flow = F.interpolate(flow, (new_size_h, new_size_w), mode='bilinear', align_corners=True)
+    valid = valid.unsqueeze(1)
+    valid = F.interpolate(valid, (new_size_h, new_size_w), mode='bilinear', align_corners=True)
+    # valid = valid.squeeze(1)
+    return image1, image2, flow, valid
+
+
 def train(args):
     model = build_model(args)
     print("Parameter Count: %d" % count_parameters(model))
@@ -201,6 +222,7 @@ def train(args):
         for i_batch, data_blob in enumerate(train_loader):
             optimizer.zero_grad()
             image1, image2, flow, valid = [x.cuda() for x in data_blob]
+            image1, image2, flow, valid = resize(image1, image2, flow, valid, div=32)
 
             if args.add_noise:
                 stdv = np.random.uniform(0.0, 5.0)
@@ -210,9 +232,9 @@ def train(args):
             flow_predictions = model(image1, image2, iters=args.iters)
 
             if args.model == 'pwc_tiny':
-                loss, metrics = multi_scale_loss(flow_predictions, flow, valid, args.gamma)
+                loss, metrics = multi_scale_loss(flow_predictions, flow, valid, gamma=args.gamma)
             else:
-                loss, metrics = sequence_loss(flow_predictions, flow, valid, args.gamma)
+                loss, metrics = sequence_loss(flow_predictions, flow, valid, gamma=args.gamma)
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)

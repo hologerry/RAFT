@@ -1,4 +1,5 @@
 import torch
+from torch._C import device
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -8,23 +9,23 @@ from core.pwc_correlation import ModuleCorrelation
 backwarp_grid = {}
 backwarp_partial = {}
 
-
 def backwarp(feat, flow):
-    if str(flow.shape) not in backwarp_grid:
-        tenHor = torch.linspace(-1.0 + (1.0 / flow.shape[3]), 1.0 - (1.0 / flow.shape[3]), flow.shape[3]).view(1, 1, 1, -1).expand(-1, -1, flow.shape[2], -1)
-        tenVer = torch.linspace(-1.0 + (1.0 / flow.shape[2]), 1.0 - (1.0 / flow.shape[2]), flow.shape[2]).view(1, 1, -1, 1).expand(-1, -1, -1, flow.shape[3])
+    assert feat.device == flow.device
+    if str(flow.shape) + '_' + str(flow.device) not in backwarp_grid:
+        horizontal = torch.linspace(-1.0 + (1.0 / flow.shape[3]), 1.0 - (1.0 / flow.shape[3]), flow.shape[3], device=flow.device).view(1, 1, 1, -1).expand(-1, -1, flow.shape[2], -1)
+        vertical = torch.linspace(-1.0 + (1.0 / flow.shape[2]), 1.0 - (1.0 / flow.shape[2]), flow.shape[2], device=flow.device).view(1, 1, -1, 1).expand(-1, -1, -1, flow.shape[3])
 
-        backwarp_grid[str(flow.shape)] = torch.cat([ tenHor, tenVer ], 1).cuda()
+        backwarp_grid[str(flow.shape) + '_' + str(flow.device)] = torch.cat([ horizontal, vertical ], 1)
 
 
-    if str(flow.shape) not in backwarp_partial:
-        backwarp_partial[str(flow.shape)] = flow.new_ones([ flow.shape[0], 1, flow.shape[2], flow.shape[3] ])
+    if str(flow.shape) + '_' + str(flow.device) not in backwarp_partial:
+        backwarp_partial[str(flow.shape) + '_' + str(flow.device)] = flow.new_ones([ flow.shape[0], 1, flow.shape[2], flow.shape[3] ])
 
 
     flow = torch.cat([ flow[:, 0:1, :, :] / ((feat.shape[3] - 1.0) / 2.0), flow[:, 1:2, :, :] / ((feat.shape[2] - 1.0) / 2.0) ], 1)
-    feat = torch.cat([ feat, backwarp_partial[str(flow.shape)] ], 1)
+    feat = torch.cat([ feat, backwarp_partial[str(flow.shape) + '_' + str(flow.device)] ], 1)
 
-    output = F.grid_sample(input=feat, grid=(backwarp_grid[str(flow.shape)] + flow).permute(0, 2, 3, 1), mode='bilinear', padding_mode='zeros', align_corners=False)
+    output = F.grid_sample(input=feat, grid=(backwarp_grid[str(flow.shape) + '_' + str(flow.device)] + flow).permute(0, 2, 3, 1), mode='bilinear', padding_mode='zeros', align_corners=False)
 
     mask = output[:, -1:, :, :]; mask[mask > 0.999] = 1.0; mask[mask < 1.0] = 0.0
 
@@ -70,6 +71,7 @@ class Decoder(nn.Module):
             self.up_feat = nn.ConvTranspose2d(in_channels=previous_channel + 48 + 48 + 24 + 16, out_channels=2, kernel_size=4, stride=2, padding=1)
             self.backwarp_coefficient = [ None, None, None, 5.0, 2.5, 1.25, 0.625, None ][level + 1]
             # https://github.com/NVlabs/PWC-Net/issues/119
+
 
     def forward(self, feat_1, feat_2, prev_level_out):
 
