@@ -56,7 +56,6 @@ class PWCTiny(nn.Module):
         # run the feature network
         feats1 = self.extractor(image1)
         feats2 = self.extractor(image2)
-
         estimate_out = self.decoder_5(feats1['C5'], feats2['C5'], None)
         flow_5 = estimate_out['flow']
         estimate_out = self.decoder_4(feats1['C4'], feats2['C4'], estimate_out)

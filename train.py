@@ -180,13 +180,13 @@ def build_model(args):
 
 
 def resize(image1, image2, flow, valid, div=32):
-    new_size_h = image1.shape[2] // div * div
-    new_size_w = image1.shape[3] // div * div
-    image1 = F.interpolate(image1, (new_size_h, new_size_w), mode='bilinear', align_corners=True)
-    image2 = F.interpolate(image2, (new_size_h, new_size_w), mode='bilinear', align_corners=True)
-    flow = F.interpolate(flow, (new_size_h, new_size_w), mode='bilinear', align_corners=True)
+    new_size_h = (image1.shape[2] // div) * div
+    new_size_w = (image1.shape[3] // div) * div
+    image1 = F.interpolate(image1, (new_size_h, new_size_w), mode='bilinear', align_corners=False)
+    image2 = F.interpolate(image2, (new_size_h, new_size_w), mode='bilinear', align_corners=False)
+    flow = F.interpolate(flow, (new_size_h, new_size_w), mode='bilinear', align_corners=False)
     valid = valid.unsqueeze(1)
-    valid = F.interpolate(valid, (new_size_h, new_size_w), mode='bilinear', align_corners=True)
+    valid = F.interpolate(valid, (new_size_h, new_size_w), mode='bilinear', align_corners=False)
     # valid = valid.squeeze(1)
     return image1, image2, flow, valid
 
@@ -222,12 +222,12 @@ def train(args):
         for i_batch, data_blob in enumerate(train_loader):
             optimizer.zero_grad()
             image1, image2, flow, valid = [x.cuda() for x in data_blob]
-            image1, image2, flow, valid = resize(image1, image2, flow, valid, div=32)
 
             if args.add_noise:
                 stdv = np.random.uniform(0.0, 5.0)
-                image1 = (image1 + stdv * torch.randn(*image1.shape).cuda()).clamp(0.0, 255.0)
-                image2 = (image2 + stdv * torch.randn(*image2.shape).cuda()).clamp(0.0, 255.0)
+                image1 = (image1 + stdv * torch.randn_like(image1)).clamp(0.0, 255.0)
+                image2 = (image2 + stdv * torch.randn_like(image2)).clamp(0.0, 255.0)
+            image1, image2, flow, valid = resize(image1, image2, flow, valid, div=32)
 
             flow_predictions = model(image1, image2, iters=args.iters)
 
