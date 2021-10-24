@@ -306,7 +306,7 @@ if __name__ == '__main__':
     parser.add_argument('--add_noise', action='store_true')
     args = parser.parse_args()
 
-    torch.manual_seed(1234)
-    np.random.seed(1234)
+    # torch.manual_seed(1234)
+    # np.random.seed(1234)
 
     train(args)
