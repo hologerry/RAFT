@@ -124,9 +124,7 @@ class FlyingChairs(FlowDataset):
 
         images = sorted(glob(osp.join(root, '*.ppm')))
         flows = sorted(glob(osp.join(root, '*.flo')))
-        # assert (len(images)//2 == len(flows))
-        print("len(images)", len(images))
-        print("len(flows)", len(flows))
+        assert (len(images)//2 == len(flows)), f"len(images) {len(images)} len(flows) {len(flows)}"
 
         split_list = np.loadtxt('RAFT/chairs_split.txt', dtype=np.int32)
         for i in range(len(flows)):
