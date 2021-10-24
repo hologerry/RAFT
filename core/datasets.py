@@ -122,8 +122,17 @@ class FlyingChairs(FlowDataset):
     def __init__(self, aug_params=None, split='train', root='data/FlyingChairs_release/data'):
         super(FlyingChairs, self).__init__(aug_params)
 
-        images = sorted(glob(osp.join(root, '*.ppm')))
-        flows = sorted(glob(osp.join(root, '*.flo')))
+        images = []
+        flows = []
+        for i in range(1, 22873):
+            image1_path = os.path.join(root, f'{i:05d}_img1.ppm')
+            image2_path = os.path.join(root, f'{i:05d}_img2.ppm')
+            flow_path = os.path.join(root, f'{i:05d}_flow.flo')
+            images.append(image1_path)
+            images.append(image2_path)
+            flows.append(flow_path)
+        # images = sorted(glob(osp.join(root, '*.ppm')))
+        # flows = sorted(glob(osp.join(root, '*.flo')))
         assert (len(images)//2 == len(flows)), f"len(images) {len(images)} len(flows) {len(flows)}"
 
         split_list = np.loadtxt('RAFT/chairs_split.txt', dtype=np.int32)
