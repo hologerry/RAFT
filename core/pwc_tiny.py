@@ -95,5 +95,4 @@ if __name__ == '__main__':
         data = torch.randn((2, 6, 224, 224)).cuda()
         out = net(data)
 
-        tgt = torch.rand_like(out)
 

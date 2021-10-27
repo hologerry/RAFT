@@ -12,6 +12,7 @@ from PIL import Image
 import core.datasets as datasets
 from core.raft import RAFT
 from core.raft_tiny import RAFTTiny
+from core.pwc_tiny import PWCTiny
 from core.utils import flow_viz, frame_utils
 from core.utils.utils import InputPadder, forward_interpolate
 
@@ -76,6 +77,7 @@ def validate_chairs(model, iters=24):
     epe_list = []
 
     val_dataset = datasets.FlyingChairs(split='validation')
+    print(f"Chairs validation length: {len(val_dataset)}")
     for val_id in range(len(val_dataset)):
         image1, image2, flow_gt, _ = val_dataset[val_id]
         image1 = image1[None].cuda()
@@ -98,7 +100,7 @@ def validate_sintel(model, iters=32):
     for dstype in ['clean', 'final']:
         val_dataset = datasets.MpiSintel(split='training', dstype=dstype)
         epe_list = []
-
+        print(f"Sintel validation length {dstype}: {len(val_dataset)}")
         for val_id in range(len(val_dataset)):
             image1, image2, flow_gt, _ = val_dataset[val_id]
             image1 = image1[None].cuda()
@@ -130,7 +132,7 @@ def validate_kitti(model, iters=24):
     """ Perform validation using the KITTI-2015 (train) split """
     model.eval()
     val_dataset = datasets.KITTI(split='training')
-
+    print(f"Kitti validation length: {len(val_dataset)}")
     out_list, epe_list = [], []
     for val_id in range(len(val_dataset)):
         image1, image2, flow_gt, valid_gt = val_dataset[val_id]
@@ -166,7 +168,7 @@ def validate_kitti(model, iters=24):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', help="restore checkpoint")
+    parser.add_argument('--ckpt', help="restore checkpoint")
     parser.add_argument('--dataset', help="dataset for evaluation")
     parser.add_argument('--small', action='store_true', help='use small model')
     parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
@@ -174,8 +176,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # model = torch.nn.DataParallel(RAFT(args))
-    model = torch.nn.DataParallel(RAFTTiny(args))
-    model.load_state_dict(torch.load(args.model))
+    # model = torch.nn.DataParallel(RAFTTiny(args))
+    model = torch.nn.DataParallel(PWCTiny(args))
+    model.load_state_dict(torch.load(args.ckpt))
 
     model.cuda()
     model.eval()

@@ -120,13 +120,14 @@ def fetch_optimizer(args, model):
 
 
 class Logger:
-    def __init__(self, model, scheduler, summary_freq):
+    def __init__(self, model, scheduler, summary_freq, log_dir):
         self.model = model
         self.scheduler = scheduler
         self.summary_freq = summary_freq
         self.total_steps = 0
         self.running_loss = {}
         self.writer = None
+        self.log_dir = log_dir
 
     def _print_training_status(self):
         metrics_data = [self.running_loss[k]/self.summary_freq for k in sorted(self.running_loss.keys())]
@@ -137,7 +138,7 @@ class Logger:
         print(training_str + metrics_str)
 
         if self.writer is None:
-            self.writer = SummaryWriter()
+            self.writer = SummaryWriter(log_dir=self.log_dir)
 
         for k in self.running_loss:
             self.writer.add_scalar(k, self.running_loss[k]/self.summary_freq, self.total_steps)
@@ -212,7 +213,7 @@ def train(args):
 
     total_steps = 0
     scaler = GradScaler(enabled=args.mixed_precision)
-    logger = Logger(model, scheduler, args.summary_freq)
+    logger = Logger(model, scheduler, args.summary_freq, checkpoint_dir)
 
     add_noise = True
 

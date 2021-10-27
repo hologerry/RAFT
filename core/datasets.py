@@ -210,23 +210,23 @@ def fetch_dataloader(args, TRAIN_DS='C+T+K+S+H'):
 
     if args.stage == 'chairs':
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.1, 'max_scale': 1.0, 'do_flip': True}
-        train_dataset = FlyingChairs(aug_params, split='training')
+        train_dataset = FlyingChairs(aug_params, split='training', root=args.data_root+'/FlyingChairs_release/data')
 
     elif args.stage == 'things':
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.4, 'max_scale': 0.8, 'do_flip': True}
-        clean_dataset = FlyingThings3D(aug_params, dstype='frames_cleanpass')
-        final_dataset = FlyingThings3D(aug_params, dstype='frames_finalpass')
+        clean_dataset = FlyingThings3D(aug_params, dstype='frames_cleanpass', root=args.data_root+'/FlyingThings3D')
+        final_dataset = FlyingThings3D(aug_params, dstype='frames_finalpass', root=args.data_root+'/FlyingThings3D')
         train_dataset = clean_dataset + final_dataset
 
     elif args.stage == 'sintel':
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.2, 'max_scale': 0.6, 'do_flip': True}
-        things = FlyingThings3D(aug_params, dstype='frames_cleanpass')
-        sintel_clean = MpiSintel(aug_params, split='training', dstype='clean')
-        sintel_final = MpiSintel(aug_params, split='training', dstype='final')
+        things = FlyingThings3D(aug_params, dstype='frames_cleanpass', root=args.data_root+'/FlyingThings3D')
+        sintel_clean = MpiSintel(aug_params, split='training', dstype='clean', root=args.data_root+'/Sintel')
+        sintel_final = MpiSintel(aug_params, split='training', dstype='final', root=args.data_root+'/Sintel')
 
         if TRAIN_DS == 'C+T+K+S+H':
-            kitti = KITTI({'crop_size': args.image_size, 'min_scale': -0.3, 'max_scale': 0.5, 'do_flip': True})
-            hd1k = HD1K({'crop_size': args.image_size, 'min_scale': -0.5, 'max_scale': 0.2, 'do_flip': True})
+            kitti = KITTI({'crop_size': args.image_size, 'min_scale': -0.3, 'max_scale': 0.5, 'do_flip': True}, root=args.data_root+'/KITTI')
+            hd1k = HD1K({'crop_size': args.image_size, 'min_scale': -0.5, 'max_scale': 0.2, 'do_flip': True}, root=args.data_root+'/HD1k')
             train_dataset = 100*sintel_clean + 100*sintel_final + 200*kitti + 5*hd1k + things
 
         elif TRAIN_DS == 'C+T+K/S':
@@ -234,7 +234,7 @@ def fetch_dataloader(args, TRAIN_DS='C+T+K+S+H'):
 
     elif args.stage == 'kitti':
         aug_params = {'crop_size': args.image_size, 'min_scale': -0.2, 'max_scale': 0.4, 'do_flip': False}
-        train_dataset = KITTI(aug_params, split='training')
+        train_dataset = KITTI(aug_params, split='training', root=args.data_root+'/KITTI')
 
     train_loader = data.DataLoader(train_dataset, batch_size=args.batch_size,
         pin_memory=False, shuffle=True, num_workers=args.batch_size//2, drop_last=True)
